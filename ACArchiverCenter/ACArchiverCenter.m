@@ -108,7 +108,7 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
     if ([object isKindOfClass:[NSDate class]]) {
         return object;
     } else if ([object respondsToSelector:@selector(dateValue)]) {
-        return [object dateValue];
+        return [object performSelector:@selector(dateValue)];
     } else if ([object isKindOfClass:[NSNumber class]] || [object isKindOfClass:[NSString class]]) {
         return [NSDate dateWithTimeIntervalSince1970:[object floatValue]];
     } else {
@@ -121,7 +121,7 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
     if ([object isKindOfClass:[NSData class]]) {
         return object;
     } else if ([object respondsToSelector:@selector(dataValue)]) {
-        return [object dataValue];
+        return [object performSelector:@selector(dateValue)];
     } else if ([object isKindOfClass:[NSString class]]) {
         return [object dataUsingEncoding:NSUTF8StringEncoding];
     } else if ([object isKindOfClass:[NSNumber class]]) {
@@ -242,6 +242,18 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
     return [NSKeyedArchiver archiveRootObject:[self keyValues] toFile:[self filePath]];
 }
 
+- (void)setObject:(id<NSCopying, NSCoding>)anObject forKeyedSubscript:(NSString *)aKey{
+    [self setObject:anObject forKey:aKey];
+}
+
+- (id)objectForKeyedSubscript:(NSString *)key{
+    return [self objectForKey:key];
+}
+
+- (NSString *)description{
+    return [[self keyValues] description];
+}
+
 @end
 
 @interface ACArchiverCenter ()
@@ -265,6 +277,8 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
     if (self = [super init]) {
         self.directory = directory;
         self.uniqueIdentifier = uniqueIdentifier;
+        
+        [self initialize];
     }
     return self;
 }
@@ -290,7 +304,7 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
 }
 
 - (NSString *)archiverCenterFolderPath{
-    return [fmts(@"%@/%@_%@", [self directory], ntoe([self uniqueIdentifier]), YRArchiverCenterFolderPath) copy];
+    return [NSString stringWithFormat:@"%@/%@_%@", [self directory], [self uniqueIdentifier], ACArchiverCenterFolderPath ];
 }
 
 - (NSString *)archiveStorageNamesFilePath{
@@ -300,13 +314,13 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
 #pragma mark - private
 
 - (NSString *)_archiveStorageFilePathWithName:(NSString *)name{
-    return [fmts(@"%@/%@.archiver", [self archiverCenterFolderPath], [name base64EncodedString]) copy];
+    return [NSString stringWithFormat:@"%@/%@.archiver", [self archiverCenterFolderPath], [[[name dataUsingEncoding:NSUTF8StringEncoding] base64EncodedStringWithOptions:NSDataBase64Encoding64CharacterLineLength] uppercaseString]];
 }
 
 - (BOOL)_storeArchiverCenterStorageNames{
     
     BOOL state = [NSKeyedArchiver archiveRootObject:[self archiveStorageNames] toFile:[self archiveStorageNamesFilePath]];
-    DDLogDebug(@"persistent storage state : %d", state);
+    NSLog(@"persistent storage state : %d", state);
     return state;
 }
 
@@ -314,17 +328,17 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
     BOOL isDirectory = NO;
     void (^createDirectoryHandler)() = ^{
         NSError *error = nil;
-        [NSFileManager createDirectoryAtPath:[self archiverCenterFolderPath] withIntermediateDirectories:YES attributes:nil error:&error];
+        [[NSFileManager defaultManager] createDirectoryAtPath:[self archiverCenterFolderPath] withIntermediateDirectories:YES attributes:nil error:&error];
         if (error) {
-            DDLogError(@"Failed to create directorr with error : %@", error);
+            NSLog(@"Failed to create directorr with error : %@", error);
         }
     };
-    if ([NSFileManager fileExistsAtPath:[self archiverCenterFolderPath] isDirectory:&isDirectory]) {
+    if (![[NSFileManager defaultManager] fileExistsAtPath:[self archiverCenterFolderPath] isDirectory:&isDirectory]) {
         if (!isDirectory) {
             NSError *error = nil;
-            [NSFileManager removeItemAtPath:[self archiverCenterFolderPath] error:&error];
+            [[NSFileManager defaultManager] removeItemAtPath:[self archiverCenterFolderPath] error:&error];
             if (error) {
-                DDLogError(@"Failed to remove file path with error : %@", error);
+                NSLog(@"Failed to remove file path with error : %@", error);
             }
             createDirectoryHandler();
         }
@@ -332,7 +346,7 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
         createDirectoryHandler();
     }
     
-    self.archiveStorageNames = [NSKeyedUnarchiver unarchiveObjectWithFile:[self archiveStorageNamesFilePath]];
+    self.archiveStorageNames = [NSKeyedUnarchiver unarchiveObjectWithFile:[self archiveStorageNamesFilePath]] ?: [NSMutableArray array];
 }
 
 #pragma mark - public
@@ -359,6 +373,7 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
         archiveStorage = newArchiveStorage(name);
         if (archiveStorage) {
             [[self archiveStorageNames] addObject:name];
+            [self _storeArchiverCenterStorageNames];
         }
     }
     return archiveStorage;

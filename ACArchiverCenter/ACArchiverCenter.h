@@ -6,7 +6,7 @@
 //  Copyright © 2016年 Marke Jave. All rights reserved.
 //
 
-#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
 @protocol ACArchiveStorage <NSCopying, NSObject, NSCoding, NSSecureCoding>
 
@@ -63,7 +63,7 @@
 
 @property (nonatomic, copy, readonly) NSString *uniqueIdentifier;
 
-- (instancetype)initWithUniqueIdentifier:(NSString *)uniqueIdentifier;
+- (instancetype)initWithUniqueIdentifier:(NSString *)uniqueIdentifier directory:(NSString *)directory;
 
 /**
  Require an storage, it will alloc an new storage if the storage didn't exist,
