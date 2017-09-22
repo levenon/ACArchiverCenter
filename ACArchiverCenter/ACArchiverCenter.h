@@ -18,37 +18,57 @@
 
 - (NSArray<NSString *> *)allKeysForObject:(id)anObject;
 
-- (NSString *)stringForKey:(NSString *)aKey;
+- (void)setObject:(id<NSObject, NSCopying, NSCoding>)anObject forKey:(NSString *)aKey;
+- (void)syncSetObject:(id<NSObject, NSCopying, NSCoding>)anObject forKey:(NSString *)aKey;
 
+- (void)removeObjectForKey:(NSString *)aKey;
+
+/**
+ Load storage synchronizely from file. the all of cached value will be clean.
+ */
+- (void)reload;
+
+/**
+ Save synchronizely into file.
+
+ @return state of saving
+ */
+- (BOOL)save;
+
+@optional
+- (NSString *)stringForKey:(NSString *)aKey;
 - (NSDate *)dateForKey:(NSString *)aKey;
 - (NSData *)dataForKey:(NSString *)aKey;
 - (NSURL *)URLForKey:(NSString *)aKey;
-- (NSArray<NSString *> *)stringArrayForKey:(NSString *)aKey;
 - (NSInteger)integerForKey:(NSString *)aKey;
 
 - (BOOL)boolForKey:(NSString *)aKey;
 - (double)doubleForKey:(NSString *)aKey;
 - (float)floatForKey:(NSString *)aKey;
+- (char)charForKey:(NSString *)aKey;
+- (unsigned char)unsignedCharForKey:(NSString *)aKey;
+- (short)shortForKey:(NSString *)aKey;
+- (unsigned short)unsignedShortForKey:(NSString *)aKey;
 - (int)intForKey:(NSString *)aKey;
+- (unsigned int)unsignedIntForKey:(NSString *)aKey;
 - (long)longForKey:(NSString *)aKey;
-
+- (unsigned long)unsignedLongForKey:(NSString *)aKey;
+- (long long)longLongForKey:(NSString *)aKey;
+- (unsigned long long)unsignedLongLongForKey:(NSString *)aKey;
 - (id<NSCopying, NSCoding>)objectForKey:(NSString *)aKey;
-- (void)setObject:(id<NSCopying, NSCoding>)anObject forKey:(NSString *)aKey;
-- (void)syncSetObject:(id<NSCopying, NSCoding>)anObject forKey:(NSString *)aKey;
 
-- (void)removeObjectForKey:(NSString *)aKey;
+- (void)setString:(NSString *)stringValue forKey:(NSString *)aKey;
+- (void)setDate:(NSDate *)dateValue forKey:(NSString *)aKey;
+- (void)setData:(NSData *)dataValue forKey:(NSString *)aKey;
+- (void)setURL:(NSURL *)URL forKey:(NSString *)aKey;
+- (void)setInteger:(NSUInteger)integerValue forKey:(NSString *)aKey;
 
-/**
- Load storage from file. the all of cached value will be clean.
- */
-- (void)reload;
+- (void)setBool:(BOOL)boolValue forKey:(NSString *)aKey;
+- (void)setDouble:(double)doubleValue forKey:(NSString *)aKey;
+- (void)setFloat:(float)floatValue forKey:(NSString *)aKey;
+- (void)setInt:(int)intValue forKey:(NSString *)aKey;
+- (void)setLong:(long)longValue forKey:(NSString *)aKey;
 
-/**
- Save into file.
-
- @return state of saving
- */
-- (BOOL)save;
 
 @end
 

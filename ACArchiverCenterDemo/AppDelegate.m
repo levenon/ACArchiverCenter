@@ -25,11 +25,25 @@
     storage[@"cache"] = @"cache_value";
     
     storage[@"file"] = @"file_value";
-    BOOL state = [storage save];
+    
+    [storage setInteger:100 forKey:@"int"];
+    
+    [storage save];
     
     [storage syncSetObject:@"sync_file" forKey:@"sync_file"];
-    
     NSLog(@"storage: %@", storage);
+    
+    long long value = [storage longLongForKey:@"int"];
+    NSLog(@"long long value: %lld", value);
+    
+    unsigned char unsignedCharValue = [storage unsignedCharForKey:@"int"];
+    NSLog(@"unsigned char value: %c", unsignedCharValue);
+    
+    NSString *stringValue = [storage stringForKey:@"int"];
+    NSLog(@"string value: %@", stringValue);
+    
+    NSDate *dateValue = [storage dateForKey:@"int"];
+    NSLog(@"date value: %@", dateValue);
     
     return YES;
 }

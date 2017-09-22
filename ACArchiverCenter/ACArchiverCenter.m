@@ -6,6 +6,7 @@
 //  Copyright © 2016年 Marke Jave. All rights reserved.
 //
 
+#import <objc/runtime.h>
 #import "ACArchiverCenter.h"
 
 NSString * const ACArchiverCenterFolderPath = @"com.archiver_center.archives";
@@ -20,6 +21,10 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
 
 @property (nonatomic, strong) NSMutableDictionary *keyValues;
 
+@property (nonatomic, strong) dispatch_queue_t queue;
+
+@property (nonatomic, assign) void *queueTag;
+
 @end
 
 @implementation ACArchiveStorage
@@ -32,7 +37,10 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
     if (self = [super init]) {
         self.name = name;
         self.filePath = filePath;
+        self.queueTag = &_queueTag;
+        self.queue = dispatch_queue_create([[@"com.archive.center.storage." stringByAppendingString:name] UTF8String], DISPATCH_QUEUE_SERIAL);
         
+        dispatch_queue_set_specific([self queue], _queueTag, _queueTag, NULL);
         [self reload];
     }
     return self;
@@ -61,13 +69,109 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
     [coder encodeObject:[self filePath] forKey:@"filePath"];
 }
 
+NSString * const ACArchiveStorageSetPredicateString = @"^set[A-Z]([a-z]|[A-Z])*:forKey:$";
+NSString * const ACArchiveStorageGetPredicateString = @"^[a-z]([a-z]|[A-Z])*ForKey:$";
+
+UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
+    va_list v;
+    va_start(v, type);
+    id obj = nil;
+    if (strcmp(type, @encode(id)) == 0) {
+        id actual = va_arg(v, id);
+        obj = actual;
+    } else if (strcmp(type, @encode(CGPoint)) == 0) {
+        CGPoint actual = (CGPoint)va_arg(v, CGPoint);
+        obj = [NSValue value:&actual withObjCType:type];
+    } else if (strcmp(type, @encode(CGSize)) == 0) {
+        CGSize actual = (CGSize)va_arg(v, CGSize);
+        obj = [NSValue value:&actual withObjCType:type];
+    } else if (strcmp(type, @encode(UIEdgeInsets)) == 0) {
+        UIEdgeInsets actual = (UIEdgeInsets)va_arg(v, UIEdgeInsets);
+        obj = [NSValue value:&actual withObjCType:type];
+    } else if (strcmp(type, @encode(double)) == 0) {
+        double actual = (double)va_arg(v, double);
+        obj = [NSNumber numberWithDouble:actual];
+    } else if (strcmp(type, @encode(float)) == 0) {
+        float actual = (float)va_arg(v, double);
+        obj = [NSNumber numberWithFloat:actual];
+    } else if (strcmp(type, @encode(int)) == 0) {
+        int actual = (int)va_arg(v, int);
+        obj = [NSNumber numberWithInt:actual];
+    } else if (strcmp(type, @encode(long)) == 0) {
+        long actual = (long)va_arg(v, long);
+        obj = [NSNumber numberWithLong:actual];
+    } else if (strcmp(type, @encode(long long)) == 0) {
+        long long actual = (long long)va_arg(v, long long);
+        obj = [NSNumber numberWithLongLong:actual];
+    } else if (strcmp(type, @encode(short)) == 0) {
+        short actual = (short)va_arg(v, int);
+        obj = [NSNumber numberWithShort:actual];
+    } else if (strcmp(type, @encode(char)) == 0) {
+        char actual = (char)va_arg(v, int);
+        obj = [NSNumber numberWithChar:actual];
+    } else if (strcmp(type, @encode(bool)) == 0) {
+        bool actual = (bool)va_arg(v, int);
+        obj = [NSNumber numberWithBool:actual];
+    } else if (strcmp(type, @encode(unsigned char)) == 0) {
+        unsigned char actual = (unsigned char)va_arg(v, unsigned int);
+        obj = [NSNumber numberWithUnsignedChar:actual];
+    } else if (strcmp(type, @encode(unsigned int)) == 0) {
+        unsigned int actual = (unsigned int)va_arg(v, unsigned int);
+        obj = [NSNumber numberWithUnsignedInt:actual];
+    } else if (strcmp(type, @encode(unsigned long)) == 0) {
+        unsigned long actual = (unsigned long)va_arg(v, unsigned long);
+        obj = [NSNumber numberWithUnsignedLong:actual];
+    } else if (strcmp(type, @encode(unsigned long long)) == 0) {
+        unsigned long long actual = (unsigned long long)va_arg(v, unsigned long long);
+        obj = [NSNumber numberWithUnsignedLongLong:actual];
+    } else if (strcmp(type, @encode(unsigned short)) == 0) {
+        unsigned short actual = (unsigned short)va_arg(v, unsigned int);
+        obj = [NSNumber numberWithUnsignedShort:actual];
+    }
+    va_end(v);
+    return obj;
+}
+
+- (void)forwardInvocation:(NSInvocation *)anInvocation{
+    NSMethodSignature *signature = [anInvocation methodSignature];
+    NSString *selectorString = NSStringFromSelector([anInvocation selector]);
+    if ([[NSPredicate predicateWithFormat:@"SELF MATCHES %@", ACArchiveStorageSetPredicateString] evaluateWithObject:selectorString]) {
+        if ([signature numberOfArguments] == 4) {
+            const char *type = [signature getArgumentTypeAtIndex:2];
+            void *value = NULL; NSString *key = nil;
+            [anInvocation getArgument:&value atIndex:2];
+            [anInvocation getArgument:&key atIndex:3];
+
+            id result = ACArchiveStorageBoxValue(type, value);
+            [self setObject:result forKey:key];
+            return;
+        }
+    } else if ([[NSPredicate predicateWithFormat:@"SELF MATCHES %@", ACArchiveStorageGetPredicateString] evaluateWithObject:selectorString]){
+        NSString *getter = [selectorString substringToIndex:[selectorString rangeOfString:@"ForKey:"].location];
+        getter = [getter hasSuffix:@"Value"] ? getter : [getter stringByAppendingString:@"Value"];
+        
+        NSString *key = nil;
+        [anInvocation getArgument:&key atIndex:2];
+        if ([key isKindOfClass:[NSString class]] && [key length]) {
+            id object = [self objectForKey:key];
+            if ([object respondsToSelector:NSSelectorFromString(getter)]) {
+                anInvocation.selector = NSSelectorFromString(getter);
+                [anInvocation invokeWithTarget:object];
+                return;
+            }
+        }
+    }
+    
+    [super forwardInvocation:anInvocation];
+}
+
 #pragma mark NSSecureCoding
 
 + (BOOL)supportsSecureCoding {
     return NO;
 }
 
-#pragma mark - accessor
+#pragma mark - public
 
 - (NSMutableDictionary *)keyValues{
     if (!_keyValues) {
@@ -107,8 +211,11 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
     id object = [self objectForKey:aKey];
     if ([object isKindOfClass:[NSDate class]]) {
         return object;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundeclared-selector"
     } else if ([object respondsToSelector:@selector(dateValue)]) {
         return [object performSelector:@selector(dateValue)];
+#pragma clang diagnostic pop
     } else if ([object isKindOfClass:[NSNumber class]] || [object isKindOfClass:[NSString class]]) {
         return [NSDate dateWithTimeIntervalSince1970:[object floatValue]];
     } else {
@@ -120,8 +227,11 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
     id object = [self objectForKey:aKey];
     if ([object isKindOfClass:[NSData class]]) {
         return object;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundeclared-selector"
     } else if ([object respondsToSelector:@selector(dataValue)]) {
-        return [object performSelector:@selector(dateValue)];
+        return [object performSelector:@selector(dataValue)];
+#pragma clang diagnostic pop
     } else if ([object isKindOfClass:[NSString class]]) {
         return [object dataUsingEncoding:NSUTF8StringEncoding];
     } else if ([object isKindOfClass:[NSNumber class]]) {
@@ -144,114 +254,98 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
     }
 }
 
-- (NSArray<NSString *> *)stringArrayForKey:(NSString *)aKey;{
-    id object = [self objectForKey:aKey];
-    if ([object isKindOfClass:[NSArray class]]) {
-        NSMutableArray *stringArray = [NSMutableArray array];
-        for (id subObject in object) {
-            if ([subObject isKindOfClass:[NSString class]]) {
-                [stringArray addObject:subObject];
-            } else if ([subObject respondsToSelector:@selector(stringValue)]) {
-                [stringArray addObject:[subObject stringValue]];
-            } else {
-                [stringArray addObject:[subObject description] ?: @""];
-            }
-        }
-        return stringArray;
-    } else {
-        return nil;
-    }
+- (id<NSObject, NSCopying, NSCoding>)objectForKey:(NSString *)aKey;{
+    __block id object = nil;
+    [self _sync:^(id accessor) {
+        object = [self keyValues][aKey];
+    }];
+    return object;
 }
 
-- (NSInteger)integerForKey:(NSString *)aKey;{
-    id object = [self objectForKey:aKey];
-    if ([object respondsToSelector:@selector(integerValue)]) {
-        return [object integerValue];
-    } else {
-        return 0;
-    }
+- (void)setObject:(id<NSObject, NSCopying, NSCoding>)anObject forKey:(NSString *)aKey{
+    if (!anObject || ![aKey length]) return;
+    if (![anObject respondsToSelector:@selector(copyWithZone:)]) return;
+    if (![anObject respondsToSelector:@selector(encodeWithCoder:)]) return;
+    if (![anObject respondsToSelector:@selector(initWithCoder:)]) return;
+    
+    [self _sync:^(id accessor) {
+        self.keyValues[aKey] = anObject;
+    }];
 }
 
-- (BOOL)boolForKey:(NSString *)aKey;{
-    id object = [self objectForKey:aKey];
-    if ([object respondsToSelector:@selector(boolValue)]) {
-        return [object boolValue];
-    } else {
-        return NO;
-    }
-}
-
-- (double)doubleForKey:(NSString *)aKey;{
-    id object = [self objectForKey:aKey];
-    if ([object respondsToSelector:@selector(doubleValue)]) {
-        return [object doubleValue];
-    } else {
-        return 0.f;
-    }
-}
-
-- (float)floatForKey:(NSString *)aKey;{
-    id object = [self objectForKey:aKey];
-    if ([object respondsToSelector:@selector(floatValue)]) {
-        return [object floatValue];
-    } else {
-        return 0.f;
-    }
-}
-
-- (int)intForKey:(NSString *)aKey;{
-    id object = [self objectForKey:aKey];
-    if ([object respondsToSelector:@selector(intValue)]) {
-        return [object intValue];
-    } else {
-        return 0;
-    }
-}
-
-- (long)longForKey:(NSString *)aKey;{
-    id object = [self objectForKey:aKey];
-    if ([object respondsToSelector:@selector(longValue)]) {
-        return [object longValue];
-    } else {
-        return 0;
-    }
-}
-
-- (id<NSCopying, NSCoding>)objectForKey:(NSString *)aKey;{
-    return [self keyValues][aKey];
-}
-
-- (void)setObject:(id<NSCopying, NSCoding>)anObject forKey:(NSString *)aKey{
-    self.keyValues[aKey] = anObject;
-}
-
-- (void)syncSetObject:(id<NSCopying, NSCoding>)anObject forKey:(NSString *)aKey;{
+- (void)syncSetObject:(id<NSObject, NSCopying, NSCoding>)anObject forKey:(NSString *)aKey;{
     [self setObject:anObject forKey:aKey];
     [self save];
 }
 
 - (void)removeObjectForKey:(NSString *)aKey{
-    return [[self keyValues] removeObjectForKey:aKey];
+    [self _sync:^(id accessor) {
+        [[self keyValues] removeObjectForKey:aKey];
+    }];
 }
 
 - (void)reload;{
-    self.keyValues = [NSKeyedUnarchiver unarchiveObjectWithFile:[self filePath]] ?: [@{} mutableCopy];
+    [self _sync:^(id accessor) {
+        self.keyValues = [NSKeyedUnarchiver unarchiveObjectWithFile:[self filePath]] ?: [@{} mutableCopy];
+    }];
 }
 
 - (BOOL)save;{
-    return [NSKeyedArchiver archiveRootObject:[self keyValues] toFile:[self filePath]];
+    return [self _synchroinzeSave];
 }
 
-- (void)setObject:(id<NSCopying, NSCoding>)anObject forKeyedSubscript:(NSString *)aKey{
+- (NSString *)description{
+    __block NSString *description = nil;
+    [self _sync:^(id accessor) {
+        description = [[self keyValues] description];
+    }];
+    return description;
+}
+
+#pragma mark - private
+
+- (void)_async:(void (^)(id accessor))block;{
+    if (dispatch_get_specific(_queueTag)) {
+        block(self);
+    } else {
+        dispatch_async([self queue], ^{
+            block(self);
+        });
+    }
+}
+
+- (void)_sync:(void (^)(id accessor))block;{
+    if (dispatch_get_specific(_queueTag)) {
+        block(self);
+    } else {
+        dispatch_sync([self queue], ^{
+            block(self);
+        });
+    }
+}
+
+- (BOOL)_synchroinzeSave;{
+    __block BOOL result = NO;
+    [self _sync:^(id accessor) {
+        result = [NSKeyedArchiver archiveRootObject:[self keyValues] toFile:[self filePath]];
+    }];
+    return result;
+}
+
+- (BOOL)_asynchroinzeSave;{
+    __block BOOL result = NO;
+    [self _sync:^(id accessor) {
+        result = [NSKeyedArchiver archiveRootObject:[self keyValues] toFile:[self filePath]];
+    }];
+    return result;
+}
+
+- (void)setObject:(id<NSObject, NSCopying, NSCoding>)anObject forKeyedSubscript:(NSString *)aKey{
     [self setObject:anObject forKey:aKey];
 }
 
 - (id)objectForKeyedSubscript:(NSString *)key{
     return [self objectForKey:key];
-}
-
-- (NSString *)description{
-    return [[self keyValues] description];
 }
 
 @end
@@ -326,7 +420,7 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
 
 - (void)_readArchiverCenterStorageNames{
     BOOL isDirectory = NO;
-    void (^createDirectoryHandler)() = ^{
+    void (^createDirectoryHandler)(void) = ^{
         NSError *error = nil;
         [[NSFileManager defaultManager] createDirectoryAtPath:[self archiverCenterFolderPath] withIntermediateDirectories:YES attributes:nil error:&error];
         if (error) {
