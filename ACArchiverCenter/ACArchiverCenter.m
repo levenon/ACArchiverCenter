@@ -19,7 +19,9 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
 
 @property (nonatomic, copy) NSString *filePath;
 
-@property (nonatomic, strong) NSMutableDictionary *keyValues;
+@property (nonatomic, strong) NSMutableDictionary *mutableKeyValues;
+
+@property (nonatomic, strong, readonly) NSDictionary *keyValues;
 
 @property (nonatomic, strong) dispatch_queue_t queue;
 
@@ -48,7 +50,7 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
 
 - (id)copyWithZone:(NSZone *)zone;{
     ACArchiveStorage *copy = [[ACArchiveStorage allocWithZone:zone] init];
-    copy.keyValues = [[self keyValues] copy];
+    copy.mutableKeyValues = [[self mutableKeyValues] copy];
     copy.name = [[self name] copy];
     copy.filePath = [[self filePath] copy];
     return copy;
@@ -56,7 +58,7 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
 
 - (instancetype)initWithCoder:(NSCoder *)coder {
     if (self = [self init]) {
-        self.keyValues = [coder decodeObjectForKey:@"keyValues"];
+        self.mutableKeyValues = [coder decodeObjectForKey:@"mutableKeyValues"];
         self.name = [coder decodeObjectForKey:@"name"];
         self.filePath = [coder decodeObjectForKey:@"filePath"];
     }
@@ -64,7 +66,7 @@ NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterD
 }
 
 - (void)encodeWithCoder:(NSCoder *)coder {
-    [coder encodeObject:[self keyValues] forKey:@"keyValues"];
+    [coder encodeObject:[self mutableKeyValues] forKey:@"mutableKeyValues"];
     [coder encodeObject:[self name] forKey:@"name"];
     [coder encodeObject:[self filePath] forKey:@"filePath"];
 }
@@ -144,6 +146,7 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
 
             id result = ACArchiveStorageBoxValue(type, value);
             [self setObject:result forKey:key];
+            
             return;
         }
     } else if ([[NSPredicate predicateWithFormat:@"SELF MATCHES %@", ACArchiveStorageGetPredicateString] evaluateWithObject:selectorString]){
@@ -162,7 +165,7 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
         }
     }
     
-    [super forwardInvocation:anInvocation];
+    [anInvocation invoke];
 }
 
 #pragma mark NSSecureCoding
@@ -173,11 +176,19 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
 
 #pragma mark - public
 
-- (NSMutableDictionary *)keyValues{
-    if (!_keyValues) {
-        _keyValues = [NSMutableDictionary dictionary];
+- (NSMutableDictionary *)mutableKeyValues{
+    if (!_mutableKeyValues) {
+        _mutableKeyValues = [NSMutableDictionary dictionary];
     }
-    return _keyValues;
+    return _mutableKeyValues;
+}
+
+- (NSDictionary *)keyValues{
+    __block NSDictionary *keyValues = nil;
+    [self _sync:^ {
+        keyValues = [[self mutableKeyValues] copy];
+    }];
+    return keyValues;
 }
 
 - (NSArray<NSString *> *)allKeys {
@@ -193,7 +204,7 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
 }
 
 - (NSArray<NSString *> *)allKeysForObject:(id)anObject{
-    return [self allKeysForObject:anObject];
+    return [[self keyValues] allKeysForObject:anObject];
 }
 
 - (NSString *)stringForKey:(NSString *)aKey;{
@@ -256,21 +267,14 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
 
 - (id<NSObject, NSCopying, NSCoding>)objectForKey:(NSString *)aKey;{
     __block id object = nil;
-    [self _sync:^(id accessor) {
+    [self _sync:^ {
         object = [self keyValues][aKey];
     }];
     return object;
 }
 
 - (void)setObject:(id<NSObject, NSCopying, NSCoding>)anObject forKey:(NSString *)aKey{
-    if (!anObject || ![aKey length]) return;
-    if (![anObject respondsToSelector:@selector(copyWithZone:)]) return;
-    if (![anObject respondsToSelector:@selector(encodeWithCoder:)]) return;
-    if (![anObject respondsToSelector:@selector(initWithCoder:)]) return;
-    
-    [self _sync:^(id accessor) {
-        self.keyValues[aKey] = anObject;
-    }];
+    [self _setObject:anObject forKey:aKey];
 }
 
 - (void)syncSetObject:(id<NSObject, NSCopying, NSCoding>)anObject forKey:(NSString *)aKey;{
@@ -279,69 +283,79 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
 }
 
 - (void)removeObjectForKey:(NSString *)aKey{
-    [self _sync:^(id accessor) {
-        [[self keyValues] removeObjectForKey:aKey];
+    [self _asyncSaveWithSyncBlock:^ {
+        [[self mutableKeyValues] removeObjectForKey:aKey];
     }];
 }
 
 - (void)reload;{
-    [self _sync:^(id accessor) {
-        self.keyValues = [NSKeyedUnarchiver unarchiveObjectWithFile:[self filePath]] ?: [@{} mutableCopy];
+    [self _sync:^ {
+        self.mutableKeyValues = [NSKeyedUnarchiver unarchiveObjectWithFile:[self filePath]] ?: [@{} mutableCopy];
     }];
 }
 
 - (BOOL)save;{
-    return [self _synchroinzeSave];
+    __block BOOL result = NO;
+    [self _sync:^ {
+        result = [self _save];
+    }];
+    return result;
 }
 
 - (NSString *)description{
     __block NSString *description = nil;
-    [self _sync:^(id accessor) {
-        description = [[self keyValues] description];
+    [self _sync:^ {
+        description = [[self mutableKeyValues] description];
     }];
     return description;
 }
 
 #pragma mark - private
 
-- (void)_async:(void (^)(id accessor))block;{
+- (void)_async:(dispatch_block_t)block;{
     if (dispatch_get_specific(_queueTag)) {
-        block(self);
+        block();
     } else {
-        dispatch_async([self queue], ^{
-            block(self);
-        });
+        dispatch_async([self queue], block);
     }
 }
 
-- (void)_sync:(void (^)(id accessor))block;{
+- (void)_sync:(dispatch_block_t)block;{
     if (dispatch_get_specific(_queueTag)) {
-        block(self);
+        block();
     } else {
-        dispatch_sync([self queue], ^{
-            block(self);
-        });
+        dispatch_sync([self queue], block);
     }
 }
 
-- (BOOL)_synchroinzeSave;{
-    __block BOOL result = NO;
-    [self _sync:^(id accessor) {
-        result = [NSKeyedArchiver archiveRootObject:[self keyValues] toFile:[self filePath]];
-    }];
-    return result;
+- (void)_asyncSaveWithSyncBlock:(dispatch_block_t)block;{
+    dispatch_block_t innerBlock = ^{
+        block();
+        
+        [self _async:^{
+            [self _save];
+        }];
+    };
+    [self _sync:innerBlock];
 }
 
-- (BOOL)_asynchroinzeSave;{
-    __block BOOL result = NO;
-    [self _sync:^(id accessor) {
-        result = [NSKeyedArchiver archiveRootObject:[self keyValues] toFile:[self filePath]];
+- (BOOL)_save;{
+    return [NSKeyedArchiver archiveRootObject:[self mutableKeyValues] toFile:[self filePath]];
+}
+
+- (void)_setObject:(id<NSObject, NSCopying, NSCoding>)anObject forKey:(NSString *)aKey{
+    if (!anObject || ![aKey length]) return;
+    if (![anObject respondsToSelector:@selector(copyWithZone:)]) return;
+    if (![anObject respondsToSelector:@selector(encodeWithCoder:)]) return;
+    if (![anObject respondsToSelector:@selector(initWithCoder:)]) return;
+    
+    [self _asyncSaveWithSyncBlock:^{
+        self.mutableKeyValues[aKey] = anObject;
     }];
-    return result;
 }
 
 - (void)setObject:(id<NSObject, NSCopying, NSCoding>)anObject forKeyedSubscript:(NSString *)aKey{
-    [self setObject:anObject forKey:aKey];
+    [self _setObject:anObject forKey:aKey];
 }
 
 - (id)objectForKeyedSubscript:(NSString *)key{
@@ -378,7 +392,7 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
 }
 
 - (void)initialize{
-    [self reloadAllStorage];
+    [self reloadAll];
 }
 
 #pragma mark = accessor
@@ -473,17 +487,17 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
     return archiveStorage;
 }
 
-- (void)reloadAllStorage {
+- (void)reloadAll {
     [[self archiveStorageNames] removeAllObjects];
-    for (id<ACArchiveStorage> archiveStorage in [[self cachedArchiveStorage] allValues]) {
-        [archiveStorage reload];
+    for (id<ACArchiveStorage> storage in [[self cachedArchiveStorage] allValues]) {
+        [storage reload];
     }
     [self _readArchiverCenterStorageNames];
 }
 
-- (void)storeAllStorage;{
-    for (id<ACArchiveStorage> archiveStorage in [[self cachedArchiveStorage] allValues]) {
-        [archiveStorage save];
+- (void)saveAll;{
+    for (id<ACArchiveStorage> storage in [[self cachedArchiveStorage] allValues]) {
+        [storage save];
     }
     [self _storeArchiverCenterStorageNames];
 }

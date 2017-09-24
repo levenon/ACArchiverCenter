@@ -8,7 +8,7 @@
 
 #import <UIKit/UIKit.h>
 
-@protocol ACArchiveStorage <NSCopying, NSObject, NSCoding, NSSecureCoding>
+@protocol ACArchiveStorage <NSObject, NSCopying, NSCoding, NSSecureCoding>
 
 @property (nonatomic, copy, readonly) NSString *name;
 @property (nonatomic, copy, readonly) NSString *filePath;
@@ -17,6 +17,7 @@
 @property (nonatomic, assign, readonly) NSUInteger count;
 
 - (NSArray<NSString *> *)allKeysForObject:(id)anObject;
+- (id<NSCopying, NSCoding>)objectForKey:(NSString *)aKey;
 
 - (void)setObject:(id<NSObject, NSCopying, NSCoding>)anObject forKey:(NSString *)aKey;
 - (void)syncSetObject:(id<NSObject, NSCopying, NSCoding>)anObject forKey:(NSString *)aKey;
@@ -37,38 +38,58 @@
 
 @optional
 - (NSString *)stringForKey:(NSString *)aKey;
-- (NSDate *)dateForKey:(NSString *)aKey;
-- (NSData *)dataForKey:(NSString *)aKey;
-- (NSURL *)URLForKey:(NSString *)aKey;
-- (NSInteger)integerForKey:(NSString *)aKey;
-
-- (BOOL)boolForKey:(NSString *)aKey;
-- (double)doubleForKey:(NSString *)aKey;
-- (float)floatForKey:(NSString *)aKey;
-- (char)charForKey:(NSString *)aKey;
-- (unsigned char)unsignedCharForKey:(NSString *)aKey;
-- (short)shortForKey:(NSString *)aKey;
-- (unsigned short)unsignedShortForKey:(NSString *)aKey;
-- (int)intForKey:(NSString *)aKey;
-- (unsigned int)unsignedIntForKey:(NSString *)aKey;
-- (long)longForKey:(NSString *)aKey;
-- (unsigned long)unsignedLongForKey:(NSString *)aKey;
-- (long long)longLongForKey:(NSString *)aKey;
-- (unsigned long long)unsignedLongLongForKey:(NSString *)aKey;
-- (id<NSCopying, NSCoding>)objectForKey:(NSString *)aKey;
-
 - (void)setString:(NSString *)stringValue forKey:(NSString *)aKey;
+
+- (NSDate *)dateForKey:(NSString *)aKey;
 - (void)setDate:(NSDate *)dateValue forKey:(NSString *)aKey;
+
+- (NSData *)dataForKey:(NSString *)aKey;
 - (void)setData:(NSData *)dataValue forKey:(NSString *)aKey;
+
+- (NSURL *)URLForKey:(NSString *)aKey;
 - (void)setURL:(NSURL *)URL forKey:(NSString *)aKey;
+
+- (NSInteger)integerForKey:(NSString *)aKey;
 - (void)setInteger:(NSUInteger)integerValue forKey:(NSString *)aKey;
 
+- (BOOL)boolForKey:(NSString *)aKey;
 - (void)setBool:(BOOL)boolValue forKey:(NSString *)aKey;
+
+- (double)doubleForKey:(NSString *)aKey;
 - (void)setDouble:(double)doubleValue forKey:(NSString *)aKey;
+
+- (float)floatForKey:(NSString *)aKey;
 - (void)setFloat:(float)floatValue forKey:(NSString *)aKey;
+
+- (char)charForKey:(NSString *)aKey;
+- (void)setChar:(char)charValue forKey:(NSString *)aKey;
+
+- (unsigned char)unsignedCharForKey:(NSString *)aKey;
+- (void)setUnsignedChar:(unsigned char)unsignedCharValue forKey:(NSString *)aKey;
+
+- (short)shortForKey:(NSString *)aKey;
+- (void)setShort:(short)shortValue forKey:(NSString *)aKey;
+
+- (unsigned short)unsignedShortForKey:(NSString *)aKey;
+- (void)setUnsignedShort:(unsigned short)unsignedShortValue forKey:(NSString *)aKey;
+
+- (int)intForKey:(NSString *)aKey;
 - (void)setInt:(int)intValue forKey:(NSString *)aKey;
+
+- (unsigned int)unsignedIntForKey:(NSString *)aKey;
+- (void)setUnsignedInt:(unsigned int)unsignedIntValue forKey:(NSString *)aKey;
+
+- (long)longForKey:(NSString *)aKey;
 - (void)setLong:(long)longValue forKey:(NSString *)aKey;
 
+- (unsigned long)unsignedLongForKey:(NSString *)aKey;
+- (void)setUnsignedLong:(unsigned long)unsignedLongValue forKey:(NSString *)aKey;
+
+- (long long)longLongForKey:(NSString *)aKey;
+- (void)setLongLong:(long long)longLongValue forKey:(NSString *)aKey;
+
+- (unsigned long long)unsignedLongLongForKey:(NSString *)aKey;
+- (void)setUnsignedLongLong:(unsigned long long)unsignedLongLongValue forKey:(NSString *)aKey;
 
 @end
 
@@ -96,11 +117,11 @@
 /**
  Reload all storages from storage-files.
  */
-- (void)reloadAllStorage;
+- (void)reloadAll;
 
 /**
  Store all storages into the files.
  */
-- (void)storeAllStorage;
+- (void)saveAll;
 
 @end
