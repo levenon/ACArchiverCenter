@@ -17,8 +17,8 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     // Override point for customization after application launch.
-    ACArchiverCenter *center = [[ACArchiverCenter alloc] initWithUniqueIdentifier:@"TestArchivers" directory:[NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask,   YES) objectAtIndex:0]];
-    id<ACArchiveStorage> storage = [center requireStorageWithName:@"com.archiver.module.test"];
+    ACArchiverCenter *center = [ACArchiverCenter defaultCenter];
+    id<ACArchiveStorage> storage = [center defaultStorage];
     
     NSLog(@"storage: %@", storage);
     
@@ -44,7 +44,13 @@
     
     NSDate *dateValue = [storage dateForKey:@"int"];
     NSLog(@"date value: %@", dateValue);
-    
+	
+	storage = [center requireStorageWithName:@"com.archiver.module.test"];
+	
+	storage[@"cache"] = @(1000);
+	
+	storage[@"file"] = @"file_value";
+	
     return YES;
 }
 

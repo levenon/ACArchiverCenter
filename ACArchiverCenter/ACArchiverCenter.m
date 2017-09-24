@@ -9,7 +9,7 @@
 #import <objc/runtime.h>
 #import "ACArchiverCenter.h"
 
-NSString * const ACrootFolderPath = @"com.archiver.center.archives";
+NSString * const ACArchiverCenterRootFolderPath = @"com.archiver.center.archives";
 NSString * const ACArchiverCenterStorageNamesFilename = @"com.archiver.center.storage.names";
 
 NSString * const ACArchiverCenterDefaultName = @"com.archiver.center.default";
@@ -391,8 +391,8 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
     static ACArchiverCenter *center = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        NSString *defaultRootFolder = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
-        center = [[self alloc] initWithUniqueIdentifier:ACArchiverCenterDefaultName directory:[defaultRootFolder stringByAppendingString:@"/Archiver"]];
+        NSString *rootFolder = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
+        center = [[self alloc] initWithUniqueIdentifier:ACArchiverCenterDefaultName directory:rootFolder];
     });
     return center;
 }
@@ -441,7 +441,7 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
 }
 
 - (NSString *)rootFolderPath{
-    return [NSString stringWithFormat:@"%@/%@_%@", [self directory], [self uniqueIdentifier], ACrootFolderPath ];
+    return [NSString stringWithFormat:@"%@/%@/%@", [self directory], ACArchiverCenterRootFolderPath, [self uniqueIdentifier]];
 }
 
 - (NSString *)storageNamesFilePath{
@@ -451,7 +451,7 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
 #pragma mark - private
 
 - (NSString *)_storageFilePathWithName:(NSString *)name{
-    return [NSString stringWithFormat:@"%@/%@.archiver", [self rootFolderPath], [[[name dataUsingEncoding:NSUTF8StringEncoding] base64EncodedStringWithOptions:NSDataBase64Encoding64CharacterLineLength] uppercaseString]];
+    return [NSString stringWithFormat:@"%@/%@.archiver", [self rootFolderPath], name];
 }
 
 - (BOOL)_saveStorageNames{
@@ -469,7 +469,7 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
             NSLog(@"Failed to create directorr with error : %@", error);
         }
     };
-    if (![[NSFileManager defaultManager] fileExistsAtPath:[self rootFolderPath] isDirectory:&isDirectory]) {
+    if ([[NSFileManager defaultManager] fileExistsAtPath:[self rootFolderPath] isDirectory:&isDirectory]) {
         if (!isDirectory) {
             NSError *error = nil;
             [[NSFileManager defaultManager] removeItemAtPath:[self rootFolderPath] error:&error];
@@ -491,6 +491,7 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
     NSParameterAssert([name length]);
     id<ACArchiveStorage> result = nil;
     id<ACArchiveStorage> (^newStorage)(NSString *storageName) = ^(NSString *storageName){
+        BOOL directory = NO;
         // New an storage from archive file.
         id<ACArchiveStorage> storage = [ACArchiveStorage archiveStorageWithName:storageName filePath:[self _storageFilePathWithName:storageName]];
         if (storage) {
