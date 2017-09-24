@@ -48,7 +48,7 @@
 		083771951E2E1B810034056F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		083771971E2E1B810034056F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		0837719E1E2E1BA20034056F /* ACArchiverCenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ACArchiverCenter.h; sourceTree = "<group>"; };
-		0837719F1E2E1BA20034056F /* ACArchiverCenter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ACArchiverCenter.m; sourceTree = "<group>"; };
+		0837719F1E2E1BA20034056F /* ACArchiverCenter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ACArchiverCenter.m; sourceTree = "<group>"; usesTabs = 0; };
 		083771B81E2E1BF20034056F /* ACArchiverCenter.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ACArchiverCenter.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		083771BB1E2E1BF20034056F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = ../ACArchiverCenterDemo/Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -80,6 +80,7 @@
 				083771811E2E1B810034056F /* Products */,
 			);
 			sourceTree = "<group>";
+			usesTabs = 1;
 		};
 		083771811E2E1B810034056F /* Products */ = {
 			isa = PBXGroup;

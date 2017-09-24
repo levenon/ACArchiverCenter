@@ -107,12 +107,33 @@
 - (instancetype)initWithUniqueIdentifier:(NSString *)uniqueIdentifier directory:(NSString *)directory;
 
 /**
+ The default center.
+
+ @return default instance of center, it's singleton.
+ */
++ (id)defaultCenter;
+
+/**
+ The default storage for default center.
+ 
+ @return default instance of storage.
+ */
++ (id<ACArchiveStorage>)defaultStorage;
+
+/**
+ The default storage for every center.
+
+ @return default instance of storage.
+ */
+- (id<ACArchiveStorage>)defaultStorage;
+
+/**
  Require an storage, it will alloc an new storage if the storage didn't exist,
  
  @param name storage name
  @return an storage
  */
-- (id<ACArchiveStorage>)requireArchiveStorageWithName:(NSString *)name;
+- (id<ACArchiveStorage>)requireStorageWithName:(NSString *)name;
 
 /**
  Reload all storages from storage-files.

@@ -18,7 +18,7 @@
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     // Override point for customization after application launch.
     ACArchiverCenter *center = [[ACArchiverCenter alloc] initWithUniqueIdentifier:@"TestArchivers" directory:[NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask,   YES) objectAtIndex:0]];
-    id<ACArchiveStorage> storage = [center requireArchiveStorageWithName:@"com.archiver.module.test"];
+    id<ACArchiveStorage> storage = [center requireStorageWithName:@"com.archiver.module.test"];
     
     NSLog(@"storage: %@", storage);
     

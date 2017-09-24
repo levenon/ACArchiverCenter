@@ -9,9 +9,12 @@
 #import <objc/runtime.h>
 #import "ACArchiverCenter.h"
 
-NSString * const ACArchiverCenterFolderPath = @"com.archiver_center.archives";
+NSString * const ACrootFolderPath = @"com.archiver_center.archives";
 NSString * const ACArchiverCenterStorageNamesFilename = @"com.archiver_center_storage_names";
 NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterDefaultArchiveStorageName";
+
+NSString * const ACArchiverCenterDefaultName = @"com.archiver.center.default";
+NSString * const ACArchiverStorageDefaultName = @"com.archiver.storage.default";
 
 @interface ACArchiveStorage ()
 
@@ -366,20 +369,43 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
 
 @interface ACArchiverCenter ()
 
-@property (nonatomic, strong) NSMutableArray<NSString *> *archiveStorageNames;
+@property (nonatomic, strong) NSMutableArray<NSString *> *storageNames;
 
-@property (nonatomic, strong) NSMutableDictionary<NSString*, id<ACArchiveStorage>> *cachedArchiveStorage;
+@property (nonatomic, strong) NSMutableDictionary<NSString*, id<ACArchiveStorage>> *cachedStorages;
 
 @property (nonatomic, copy) NSString *directory;
 
 @property (nonatomic, copy) NSString *uniqueIdentifier;
 
-@property (nonatomic, copy, readonly) NSString *archiverCenterFolderPath;
-@property (nonatomic, copy, readonly) NSString *archiveStorageNamesFilePath;
+@property (nonatomic, copy, readonly) NSString *rootFolderPath;
+@property (nonatomic, copy, readonly) NSString *storageNamesFilePath;
 
 @end
 
 @implementation ACArchiverCenter
+
++ (id)defaultCenter;{
+    static ACArchiverCenter *center = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSString *defaultRootFolder = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
+        center = [[self alloc] initWithUniqueIdentifier:ACArchiverCenterDefaultName directory:[defaultRootFolder stringByAppendingString:@"/Archiver"]];
+    });
+    return center;
+}
+
+/**
+ The default storage for default center.
+ 
+ @return default instance of storage.
+ */
++ (id<ACArchiveStorage>)defaultStorage;{
+    return [[self defaultCenter] defaultStorage];
+}
+
+- (id<ACArchiveStorage>)defaultStorage;{
+    return [self requireStorageWithName:ACArchiverStorageDefaultName];
+}
 
 - (instancetype)initWithUniqueIdentifier:(NSString *)uniqueIdentifier directory:(NSString *)directory;{
     if (self = [super init]) {
@@ -397,54 +423,53 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
 
 #pragma mark = accessor
 
-- (NSMutableArray<NSString *> *)archiveStorageNames{
-    if (!_archiveStorageNames) {
-        _archiveStorageNames = [NSMutableArray array];
+- (NSMutableArray<NSString *> *)storageNames{
+    if (!_storageNames) {
+        _storageNames = [NSMutableArray array];
     }
-    return _archiveStorageNames;
+    return _storageNames;
 }
 
-- (NSMutableDictionary<NSString *,id<ACArchiveStorage>> *)cachedArchiveStorage{
-    if (!_cachedArchiveStorage) {
-        _cachedArchiveStorage = [NSMutableDictionary dictionary];
+- (NSMutableDictionary<NSString *,id<ACArchiveStorage>> *)cachedStorages{
+    if (!_cachedStorages) {
+        _cachedStorages = [NSMutableDictionary dictionary];
     }
-    return _cachedArchiveStorage;
+    return _cachedStorages;
 }
 
-- (NSString *)archiverCenterFolderPath{
-    return [NSString stringWithFormat:@"%@/%@_%@", [self directory], [self uniqueIdentifier], ACArchiverCenterFolderPath ];
+- (NSString *)rootFolderPath{
+    return [NSString stringWithFormat:@"%@/%@_%@", [self directory], [self uniqueIdentifier], ACrootFolderPath ];
 }
 
-- (NSString *)archiveStorageNamesFilePath{
-    return [self _archiveStorageFilePathWithName:ACArchiverCenterStorageNamesFilename];
+- (NSString *)storageNamesFilePath{
+    return [self _storageFilePathWithName:ACArchiverCenterStorageNamesFilename];
 }
 
 #pragma mark - private
 
-- (NSString *)_archiveStorageFilePathWithName:(NSString *)name{
-    return [NSString stringWithFormat:@"%@/%@.archiver", [self archiverCenterFolderPath], [[[name dataUsingEncoding:NSUTF8StringEncoding] base64EncodedStringWithOptions:NSDataBase64Encoding64CharacterLineLength] uppercaseString]];
+- (NSString *)_storageFilePathWithName:(NSString *)name{
+    return [NSString stringWithFormat:@"%@/%@.archiver", [self rootFolderPath], [[[name dataUsingEncoding:NSUTF8StringEncoding] base64EncodedStringWithOptions:NSDataBase64Encoding64CharacterLineLength] uppercaseString]];
 }
 
-- (BOOL)_storeArchiverCenterStorageNames{
-    
-    BOOL state = [NSKeyedArchiver archiveRootObject:[self archiveStorageNames] toFile:[self archiveStorageNamesFilePath]];
+- (BOOL)_saveStorageNames{
+    BOOL state = [NSKeyedArchiver archiveRootObject:[self storageNames] toFile:[self storageNamesFilePath]];
     NSLog(@"persistent storage state : %d", state);
     return state;
 }
 
-- (void)_readArchiverCenterStorageNames{
+- (void)_readStorageNames{
     BOOL isDirectory = NO;
     void (^createDirectoryHandler)(void) = ^{
         NSError *error = nil;
-        [[NSFileManager defaultManager] createDirectoryAtPath:[self archiverCenterFolderPath] withIntermediateDirectories:YES attributes:nil error:&error];
+        [[NSFileManager defaultManager] createDirectoryAtPath:[self rootFolderPath] withIntermediateDirectories:YES attributes:nil error:&error];
         if (error) {
             NSLog(@"Failed to create directorr with error : %@", error);
         }
     };
-    if (![[NSFileManager defaultManager] fileExistsAtPath:[self archiverCenterFolderPath] isDirectory:&isDirectory]) {
+    if (![[NSFileManager defaultManager] fileExistsAtPath:[self rootFolderPath] isDirectory:&isDirectory]) {
         if (!isDirectory) {
             NSError *error = nil;
-            [[NSFileManager defaultManager] removeItemAtPath:[self archiverCenterFolderPath] error:&error];
+            [[NSFileManager defaultManager] removeItemAtPath:[self rootFolderPath] error:&error];
             if (error) {
                 NSLog(@"Failed to remove file path with error : %@", error);
             }
@@ -454,52 +479,50 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
         createDirectoryHandler();
     }
     
-    self.archiveStorageNames = [NSKeyedUnarchiver unarchiveObjectWithFile:[self archiveStorageNamesFilePath]] ?: [NSMutableArray array];
+    self.storageNames = [NSKeyedUnarchiver unarchiveObjectWithFile:[self storageNamesFilePath]] ?: [NSMutableArray array];
 }
 
 #pragma mark - public
 
-- (id<ACArchiveStorage>)requireArchiveStorageWithName:(NSString *)name {
+- (id<ACArchiveStorage>)requireStorageWithName:(NSString *)name {
     NSParameterAssert([name length]);
-    id<ACArchiveStorage> archiveStorage = nil;
-    id<ACArchiveStorage> (^newArchiveStorage)(NSString *storageName) = ^(NSString *storageName){
+    id<ACArchiveStorage> result = nil;
+    id<ACArchiveStorage> (^newStorage)(NSString *storageName) = ^(NSString *storageName){
         // New an storage from archive file.
-        id<ACArchiveStorage> storage = [ACArchiveStorage archiveStorageWithName:storageName filePath:[self _archiveStorageFilePathWithName:storageName]];
+        id<ACArchiveStorage> storage = [ACArchiveStorage archiveStorageWithName:storageName filePath:[self _storageFilePathWithName:storageName]];
         if (storage) {
-            self.cachedArchiveStorage[name] = storage;
+            self.cachedStorages[name] = storage;
         }
         return storage;
     };
     // Append name if the storage hasn't loaded.
-    if ([[self archiveStorageNames] containsObject:name]) {
-        if ([[[self cachedArchiveStorage] allKeys] containsObject:name]) {
-            archiveStorage = [self cachedArchiveStorage][name];
-        } else {
-            archiveStorage = newArchiveStorage(name);
-        }
+    if ([[self storageNames] containsObject:name] && [[[self cachedStorages] allKeys] containsObject:name]) {
+        result = [self cachedStorages][name];
     } else {
-        archiveStorage = newArchiveStorage(name);
-        if (archiveStorage) {
-            [[self archiveStorageNames] addObject:name];
-            [self _storeArchiverCenterStorageNames];
-        }
+        result = newStorage(name);
     }
-    return archiveStorage;
+    
+    if (result && ![[self storageNames] containsObject:name]) {
+        [[self storageNames] addObject:name];
+        [self _saveStorageNames];
+    }
+    
+    return result;
 }
 
 - (void)reloadAll {
-    [[self archiveStorageNames] removeAllObjects];
-    for (id<ACArchiveStorage> storage in [[self cachedArchiveStorage] allValues]) {
+    [[self storageNames] removeAllObjects];
+    for (id<ACArchiveStorage> storage in [[self cachedStorages] allValues]) {
         [storage reload];
     }
-    [self _readArchiverCenterStorageNames];
+    [self _readStorageNames];
 }
 
 - (void)saveAll;{
-    for (id<ACArchiveStorage> storage in [[self cachedArchiveStorage] allValues]) {
+    for (id<ACArchiveStorage> storage in [[self cachedStorages] allValues]) {
         [storage save];
     }
-    [self _storeArchiverCenterStorageNames];
+    [self _saveStorageNames];
 }
 
 @end
