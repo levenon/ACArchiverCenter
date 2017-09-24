@@ -210,6 +210,10 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
     return [[self keyValues] allKeysForObject:anObject];
 }
 
+- (NSArray<NSObject, NSCopying, NSCoding> *)objectsForKeys:(NSArray<NSString *> *)keys notFoundMarker:(id)marker;{
+    return [[self keyValues] objectsForKeys:keys notFoundMarker:marker];
+}
+
 - (NSString *)stringForKey:(NSString *)aKey;{
     id object = [self objectForKey:aKey];
     if ([object isKindOfClass:[NSString class]]) {

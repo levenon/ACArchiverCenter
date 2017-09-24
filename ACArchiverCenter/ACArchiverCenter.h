@@ -17,6 +17,8 @@
 @property (nonatomic, assign, readonly) NSUInteger count;
 
 - (NSArray<NSString *> *)allKeysForObject:(id)anObject;
+- (NSArray<NSObject, NSCopying, NSCoding> *)objectsForKeys:(NSArray<NSString *> *)keys notFoundMarker:(id)marker;
+
 - (id<NSCopying, NSCoding>)objectForKey:(NSString *)aKey;
 
 - (void)setObject:(id<NSObject, NSCopying, NSCoding>)anObject forKey:(NSString *)aKey;
@@ -37,6 +39,7 @@
 - (BOOL)save;
 
 @optional
+
 - (NSString *)stringForKey:(NSString *)aKey;
 - (void)setString:(NSString *)stringValue forKey:(NSString *)aKey;
 
