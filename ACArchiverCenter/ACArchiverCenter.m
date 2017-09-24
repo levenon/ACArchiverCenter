@@ -1,17 +1,16 @@
 //
 //  ACArchiverCenter.m
-//  Marke Jave
+//  xulinfeng
 //
-//  Created by Marke Jave on 2016/12/22.
-//  Copyright © 2016年 Marke Jave. All rights reserved.
+//  Created by xulinfeng on 2016/12/22.
+//  Copyright © 2016年 xulinfeng. All rights reserved.
 //
 
 #import <objc/runtime.h>
 #import "ACArchiverCenter.h"
 
-NSString * const ACrootFolderPath = @"com.archiver_center.archives";
-NSString * const ACArchiverCenterStorageNamesFilename = @"com.archiver_center_storage_names";
-NSString * const ACArchiverCenterDefaultArchiveStorageName = @"ACArchiverCenterDefaultArchiveStorageName";
+NSString * const ACrootFolderPath = @"com.archiver.center.archives";
+NSString * const ACArchiverCenterStorageNamesFilename = @"com.archiver.center.storage.names";
 
 NSString * const ACArchiverCenterDefaultName = @"com.archiver.center.default";
 NSString * const ACArchiverStorageDefaultName = @"com.archiver.storage.default";
