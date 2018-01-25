@@ -50,7 +50,7 @@
 		0837719E1E2E1BA20034056F /* ACArchiverCenter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ACArchiverCenter.h; sourceTree = "<group>"; };
 		0837719F1E2E1BA20034056F /* ACArchiverCenter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ACArchiverCenter.m; sourceTree = "<group>"; usesTabs = 0; };
 		083771B81E2E1BF20034056F /* ACArchiverCenter.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ACArchiverCenter.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		083771BB1E2E1BF20034056F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = ../ACArchiverCenterDemo/Info.plist; sourceTree = "<group>"; };
+		089A71DD2019CA1600697439 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -76,7 +76,6 @@
 			children = (
 				0837719D1E2E1BA20034056F /* ACArchiverCenter */,
 				083771821E2E1B810034056F /* ACArchiverCenterDemo */,
-				083771B91E2E1BF20034056F /* ACArchiverCenter */,
 				083771811E2E1B810034056F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -115,16 +114,9 @@
 		0837719D1E2E1BA20034056F /* ACArchiverCenter */ = {
 			isa = PBXGroup;
 			children = (
+				089A71DD2019CA1600697439 /* Info.plist */,
 				0837719E1E2E1BA20034056F /* ACArchiverCenter.h */,
 				0837719F1E2E1BA20034056F /* ACArchiverCenter.m */,
-			);
-			path = ACArchiverCenter;
-			sourceTree = "<group>";
-		};
-		083771B91E2E1BF20034056F /* ACArchiverCenter */ = {
-			isa = PBXGroup;
-			children = (
-				083771BB1E2E1BF20034056F /* Info.plist */,
 			);
 			path = ACArchiverCenter;
 			sourceTree = "<group>";
@@ -415,6 +407,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = "$(SRCROOT)/ACArchiverCenter/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
@@ -435,6 +428,7 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = "$(SRCROOT)/ACArchiverCenter/Info.plist";
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";

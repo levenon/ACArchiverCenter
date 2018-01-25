@@ -149,7 +149,7 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
         BBLinkArchiverCenterRetain(key);
         
         NSString *copiedKey = [key copy];
-        id result = BBLinkArchiveStorageBoxValue(type, value);
+        id result = ACArchiveStorageBoxValue(type, value);
         [self setObject:result forKey:copiedKey];
         
         anInvocation.target = nil;
@@ -501,7 +501,6 @@ UIKIT_STATIC_INLINE id ACArchiveStorageBoxValue(const char *type, ...) {
     NSParameterAssert([name length]);
     id<ACArchiveStorage> result = nil;
     id<ACArchiveStorage> (^newStorage)(NSString *storageName) = ^(NSString *storageName){
-        BOOL directory = NO;
         // New an storage from archive file.
         id<ACArchiveStorage> storage = [ACArchiveStorage archiveStorageWithName:storageName filePath:[self _storageFilePathWithName:storageName]];
         if (storage) {
