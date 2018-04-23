@@ -21,6 +21,9 @@
 
 - (id<NSCopying, NSCoding>)objectForKey:(NSString *)aKey;
 
+- (id)objectForKeyedSubscript:(NSString *)key;
+- (void)setObject:(id<NSObject, NSCopying, NSCoding>)anObject forKeyedSubscript:(NSString *)aKey;
+
 - (void)setObject:(id<NSObject, NSCopying, NSCoding>)anObject forKey:(NSString *)aKey;
 - (void)syncSetObject:(id<NSObject, NSCopying, NSCoding>)anObject forKey:(NSString *)aKey;
 
